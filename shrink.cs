@@ -14,18 +14,18 @@ namespace LZW
             List<int> compressed = Compress(File.ReadAllBytes("/storage/emulated/0/Download/fresh.mp3"));
             List<Byte> data = Qsx(compressed);
             List<int> lzw = Compress(data.ToArray());
-			//while(lzw.Count>100)
-			//{
-			//  data = Qsx(lzw);
-			//  lzw = Compress(data.ToArray());
-			//  Console.WriteLine(lzw.Count);
-			//}
+			while(lzw.Count>100)
+			{
+			  data = Qsx(lzw);
+			  lzw = Compress(data.ToArray());
+			  Console.WriteLine(lzw.Count);
+			}
 			Console.WriteLine("{0} :: {1} :: {2} ", compressed.Count,data.Count,lzw.Count);
             
             string decompressed = Decompress(compressed);
             //Console.WriteLine(decompressed);
         }
-		public static void write(List<Byte>output, int data, int bits)
+		public static void writeValue(List<Byte>output, int data, int bits)
 		{
 			while(bits>0)
 			{
@@ -56,8 +56,35 @@ namespace LZW
 				Power[output]=0;
 			}
 		}
-		public static List<int>code=new List<int>    {1,1,2,3,4,5,6,7,1,2,3,4,5,6,7,0};
-		public static List<int>codebits=new List<int>{1,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8};
+		public static int readValue(Byte[] input, int bits)
+		{
+			int value=0;
+			while(bits>0)
+			{
+				bits--;
+				value=value<<1;
+				value+=readBit(input);
+			}
+			return value;
+		}
+		public static int readBit(Byte[] input)
+		{
+			int value=0;
+			if(Power.ContainsKey(input))
+			Power[input]++;
+			else
+			Power[input]=1;
+			
+			if (!Bits.ContainsKey(input))
+			  Bits[input]=0;
+			  
+			value=((input[Bits[input]])>>(8-Power[input]))&1;
+			return (value==0)?0:1;
+		}
+		
+		public static int[] code=new int[]           {1,1,2,3,4,5,6,7,1,2,3,4,5,6,7,0};
+		public static int[] codebits=new int[]       {1,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8};
+	
 		
 		public static List<Byte> Qsx(List<int> lzwdata)
 		{
@@ -74,10 +101,10 @@ Power=new Dictionary<object,int>();
 				int n=(int)(lzwdata[a++]>>8)&15;
 				int o=(int)(lzwdata[a++]>>12)&15;
 				
-				write(bytes,code[l],codebits[l]);
-				write(bytes,code[m],codebits[m]);
-				write(bytes,code[n],codebits[n]);
-				write(bytes,code[o],codebits[o]);
+				writeValue(bytes,code[l],codebits[l]);
+				writeValue(bytes,code[m],codebits[m]);
+				writeValue(bytes,code[n],codebits[n]);
+				writeValue(bytes,code[o],codebits[o]);
 				
 				}catch(Exception ex){ex.ToString();}
 			}
@@ -89,6 +116,7 @@ Power=new Dictionary<object,int>();
 		public static List<int> Usx(List<Byte> qsxdata)
 		{
 			var ints=new List<int>();
+			
 			return ints;
 		}
         public static List<int> Compress(byte[] uncompressed)
