@@ -9,20 +9,20 @@ namespace LZW
     {
         public static void Main(string[] args)
         {
-        	Console.WriteLine("Encoding...");
-            
-            List<int> compressed = Compress(File.ReadAllBytes("/storage/emulated/0/Download/fresh.mp3"));
+            Console.WriteLine("Encoding...");
+            Bits = new Dictionary<object,int>();
+            Power= new Dictionary<object,int>();
+            List<int> compressed = Compress(File.ReadAllBytes("/storage/emulated/0/Edited/L.html"));
+           
+            //todo:debug
             List<Byte> data = Qsx(compressed);
-            List<int> lzw = Compress(data.ToArray());
-			while(lzw.Count>100)
-			{
-			  data = Qsx(lzw);
-			  lzw = Compress(data.ToArray());
-			  Console.WriteLine(lzw.Count);
-			}
-			Console.WriteLine("{0} :: {1} :: {2} ", compressed.Count,data.Count,lzw.Count);
+            List<int> idata = Usx(data);
             
-            string decompressed = Decompress(compressed);
+            Console.WriteLine(String.Join(",",compressed));
+			Console.WriteLine("::");
+			Console.WriteLine(String.Join(",",idata));
+			
+            //string decompressed = Decompress(idata);
             //Console.WriteLine(decompressed);
         }
 		public static void writeValue(List<Byte>output, int data, int bits)
@@ -56,7 +56,7 @@ namespace LZW
 				Power[output]=0;
 			}
 		}
-		public static int readValue(Byte[] input, int bits)
+		public static int readValue(List<Byte> input, int bits)
 		{
 			int value=0;
 			while(bits>0)
@@ -67,9 +67,10 @@ namespace LZW
 			}
 			return value;
 		}
-		public static int readBit(Byte[] input)
+		public static int readBit(List<Byte> input)
 		{
 			int value=0;
+			try{
 			if(Power.ContainsKey(input))
 			Power[input]++;
 			else
@@ -77,20 +78,23 @@ namespace LZW
 			
 			if (!Bits.ContainsKey(input))
 			  Bits[input]=0;
-			  
+			
+			if (Power[input]>=8)
+			   Bits[input]++;
+			   
 			value=((input[Bits[input]])>>(8-Power[input]))&1;
+			}catch(Exception ex){ex.ToString();}
 			return (value==0)?0:1;
 		}
 		
 		public static int[] code=new int[]           {1,1,2,3,4,5,6,7,1,2,3,4,5,6,7,0};
 		public static int[] codebits=new int[]       {1,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8};
-	
+	    public static int[] decode=new int[]  {15,8,9,10,11,12,13,14};
 		
 		public static List<Byte> Qsx(List<int> lzwdata)
 		{
 			var bytes = new List<Byte>();
-Bits=new Dictionary<object,int>();
-Power=new Dictionary<object,int>();
+			
 		
 			var a=0;
 			while(a<lzwdata.Count)
@@ -101,10 +105,10 @@ Power=new Dictionary<object,int>();
 				int n=(int)(lzwdata[a++]>>8)&15;
 				int o=(int)(lzwdata[a++]>>12)&15;
 				
-				writeValue(bytes,code[l],codebits[l]);
-				writeValue(bytes,code[m],codebits[m]);
-				writeValue(bytes,code[n],codebits[n]);
 				writeValue(bytes,code[o],codebits[o]);
+				writeValue(bytes,code[n],codebits[n]);
+				writeValue(bytes,code[m],codebits[m]);
+				writeValue(bytes,code[l],codebits[l]);
 				
 				}catch(Exception ex){ex.ToString();}
 			}
@@ -117,6 +121,68 @@ Power=new Dictionary<object,int>();
 		{
 			var ints=new List<int>();
 			
+			int i,q,decoded=0;
+			int zero=readBit(qsxdata);
+			
+		while(Bits[qsxdata]<qsxdata.Count)
+		{
+			
+			
+			if(zero==0){
+				q = readValue(qsxdata,3);
+				if (q==0){
+					q=readValue(qsxdata,4);
+					decoded+=decode[q];
+				}else{
+					decoded+=q;
+				}
+			}
+			
+			decoded=decoded<<4;
+			
+			zero=readBit(qsxdata);
+			
+			if(zero==0){
+				q = readValue(qsxdata,3);
+				if (q==0){
+					q=readValue(qsxdata,4);
+					decoded+=decode[q];
+				}else{
+					decoded+=q;
+				}
+			}
+			
+			decoded=decoded<<4;
+			
+			zero=readBit(qsxdata);
+			
+			if(zero==0){
+				q = readValue(qsxdata,3);
+				if (q==0){
+					q=readValue(qsxdata,4);
+					decoded+=decode[q];
+				}else{
+					decoded+=q;
+				}
+			}
+			
+			decoded=decoded<<4;
+			
+			zero=readBit(qsxdata);
+			if(zero==0){
+				q = readValue(qsxdata,3);
+				if (q==0){
+					q=readValue(qsxdata,4);
+					decoded+=decode[q];
+				}else{
+					decoded+=q;
+				}
+			}
+			
+			ints.Add(decoded);
+			
+			zero=readBit(qsxdata);
+		}
 			return ints;
 		}
         public static List<int> Compress(byte[] uncompressed)
