@@ -14,16 +14,17 @@ namespace LZW
             Power= new Dictionary<object,int>();
             List<int> compressed = Compress(File.ReadAllBytes("/storage/emulated/0/Edited/L.html"));
            
-            //todo:debug
+           
+            
             List<Byte> data = Qsx(compressed);
+            List<int> lzw = Compress(data.ToArray());
+            
             List<int> idata = Usx(data);
             
-            Console.WriteLine(String.Join(",",compressed));
-			Console.WriteLine("::");
-			Console.WriteLine(String.Join(",",idata));
+			Console.WriteLine("{0} :: {1} :: {2}",compressed.Count,data.Count,lzw.Count);
 			
-            //string decompressed = Decompress(idata);
-            //Console.WriteLine(decompressed);
+            string decompressed = Decompress(idata);
+            Console.WriteLine(decompressed);
         }
 		public static void writeValue(List<Byte>output, int data, int bits)
 		{
@@ -88,7 +89,7 @@ namespace LZW
 			   Power[input]=0;
 			}
 				
-			}catch(Exception ex){ex.ToString();}
+			}catch(Exception ex){ex.ToString(); }
 			return (value==0)?0:1;
 		}
 		
@@ -99,7 +100,8 @@ namespace LZW
 		public static List<Byte> Qsx(List<int> lzwdata)
 		{
 			var bytes = new List<Byte>();
-			
+			Bits[lzwdata]=0;
+			Power[lzwdata]=0;
 		
 			var a=0;
 			while(a<lzwdata.Count)
@@ -117,8 +119,9 @@ namespace LZW
 				a++;
 				}catch(Exception ex){ex.ToString();}
 			}
-				  
-				
+			
+			while(Power[bytes]!=0)
+			   writeBit(bytes,1);
 			
 			return bytes;
 		}
@@ -126,13 +129,16 @@ namespace LZW
 		{
 			var ints=new List<int>();
 			
+			Bits[qsxdata]=0;
+			Power[qsxdata]=0;
+			
 			int i,q,decoded=0;
 			int zero=readBit(qsxdata);
 			
-		while(Bits[qsxdata]<qsxdata.Count)
+		while(Bits[qsxdata]<(qsxdata.Count))
 		{
 			
-			
+			decoded=0;
 			if(zero==0){
 				q = readValue(qsxdata,3);
 				if (q==0){
@@ -188,6 +194,7 @@ namespace LZW
 			
 			zero=readBit(qsxdata);
 		}
+			//ints.RemoveAt(ints.Count-1);
 			return ints;
 		}
         public static List<int> Compress(byte[] uncompressed)
