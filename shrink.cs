@@ -79,10 +79,15 @@ namespace LZW
 			if (!Bits.ContainsKey(input))
 			  Bits[input]=0;
 			
-			if (Power[input]>=8)
-			   Bits[input]++;
-			   
+			
 			value=((input[Bits[input]])>>(8-Power[input]))&1;
+			
+			if (Power[input]>=8)
+			{
+			   Bits[input]++;
+			   Power[input]=0;
+			}
+				
 			}catch(Exception ex){ex.ToString();}
 			return (value==0)?0:1;
 		}
@@ -100,16 +105,16 @@ namespace LZW
 			while(a<lzwdata.Count)
 			{
 				try{
-				int l=(int)(lzwdata[a++]&15);
-				int m=(int)(lzwdata[a++]>>4)&15;
-				int n=(int)(lzwdata[a++]>>8)&15;
-				int o=(int)(lzwdata[a++]>>12)&15;
+				int l=(int)(lzwdata[a]&15);
+				int m=(int)(lzwdata[a]>>4)&15;
+				int n=(int)(lzwdata[a]>>8)&15;
+				int o=(int)(lzwdata[a]>>12)&15;
 				
 				writeValue(bytes,code[o],codebits[o]);
 				writeValue(bytes,code[n],codebits[n]);
 				writeValue(bytes,code[m],codebits[m]);
 				writeValue(bytes,code[l],codebits[l]);
-				
+				a++;
 				}catch(Exception ex){ex.ToString();}
 			}
 				  
