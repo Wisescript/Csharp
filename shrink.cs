@@ -14,18 +14,29 @@ namespace LZW
             Power= new Dictionary<object,int>();
             List<int> compressed = Compress(File.ReadAllBytes("/storage/emulated/0/Edited/L.html"));
            
-           
+           List<int> fileIn = new List<int>();
+            foreach(var b in File.ReadAllBytes("/storage/emulated/0/Edited/L.html"))
+              fileIn.Add(b);
+            List<Byte> data = Qsx(fileIn);
             
-            List<Byte> data = Qsx(compressed);
             List<int> lzw = Compress(data.ToArray());
+            while(lzw.Count>compressed.Count)
+            {
+             data = Qsx(lzw);
             
-            List<int> idata = Usx(data);
+             lzw = Compress(data.ToArray());
+            }
             
-			Console.WriteLine("{0} :: {1} :: {2}",compressed.Count,data.Count,lzw.Count);
+            
+            List<int>  idata = Usx(data);
+            
+			Console.WriteLine("{0} :: {1} :: {2} :: {3}",
+			fileIn.Count,
+			data.Count,
+			lzw.Count,
+			compressed.Count);
 			
-            string decompressed = Decompress(idata);
-            Console.WriteLine(decompressed);
-        }
+		 }
 		public static void writeValue(List<Byte>output, int data, int bits)
 		{
 			while(bits>0)
@@ -93,10 +104,9 @@ namespace LZW
 			return (value==0)?0:1;
 		}
 		
-		public static int[] code=new int[]           {1,1,2,3,4,5,6,7,1,2,3,4,5,6,7,0};
-		public static int[] codebits=new int[]       {1,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8};
-	    public static int[] decode=new int[]  {15,8,9,10,11,12,13,14};
-		
+		public static int[] code=new int[]           {1,1,1,1,1,1,1,1,0,2,3,4,5,6,7,0};
+		public static int[] codebits=new int[]       {1,2,3,3,4,5,6,7,8,7,7,7,7,7,7,7};
+	    
 		public static List<Byte> Qsx(List<int> lzwdata)
 		{
 			var bytes = new List<Byte>();
@@ -107,10 +117,10 @@ namespace LZW
 			while(a<lzwdata.Count)
 			{
 				try{
-				int l=(int)(lzwdata[a]&15);
-				int m=(int)(lzwdata[a]>>4)&15;
-				int n=(int)(lzwdata[a]>>8)&15;
-				int o=(int)(lzwdata[a]>>12)&15;
+				int l=(int)(lzwdata[a]&3);
+				int m=(int)(lzwdata[a]>>2)&3;
+				int n=(int)(lzwdata[a]>>4)&3;
+				int o=(int)(lzwdata[a]>>6)&3;
 				
 				writeValue(bytes,code[o],codebits[o]);
 				writeValue(bytes,code[n],codebits[n]);
@@ -133,68 +143,83 @@ namespace LZW
 			Power[qsxdata]=0;
 			
 			int i,q,decoded=0;
-			int zero=readBit(qsxdata);
+		
 			
 		while(Bits[qsxdata]<(qsxdata.Count))
 		{
 			
 			decoded=0;
+			int zero=readBit(qsxdata);
 			if(zero==0){
-				q = readValue(qsxdata,3);
+				q = readBit(qsxdata);
 				if (q==0){
-					q=readValue(qsxdata,4);
-					decoded+=decode[q];
+					q=readBit(qsxdata);
+					if(q==0){
+						decoded+=3;
+					}else{
+						decoded+=2;
+					}
 				}else{
-					decoded+=q;
+					decoded+=1;
 				}
 			}
 			
-			decoded=decoded<<4;
+			decoded=decoded<<2;
 			
 			zero=readBit(qsxdata);
-			
 			if(zero==0){
-				q = readValue(qsxdata,3);
+				q = readBit(qsxdata);
 				if (q==0){
-					q=readValue(qsxdata,4);
-					decoded+=decode[q];
+					q=readBit(qsxdata);
+					if(q==0){
+						decoded+=3;
+					}else{
+						decoded+=2;
+					}
 				}else{
-					decoded+=q;
+					decoded+=1;
 				}
 			}
 			
-			decoded=decoded<<4;
+			decoded=decoded<<2;
 			
 			zero=readBit(qsxdata);
-			
 			if(zero==0){
-				q = readValue(qsxdata,3);
+				q = readBit(qsxdata);
 				if (q==0){
-					q=readValue(qsxdata,4);
-					decoded+=decode[q];
+					q=readBit(qsxdata);
+					if(q==0){
+						decoded+=3;
+					}else{
+						decoded+=2;
+					}
 				}else{
-					decoded+=q;
+					decoded+=1;
 				}
 			}
 			
-			decoded=decoded<<4;
+			decoded=decoded<<2;
 			
 			zero=readBit(qsxdata);
 			if(zero==0){
-				q = readValue(qsxdata,3);
+				q = readBit(qsxdata);
 				if (q==0){
-					q=readValue(qsxdata,4);
-					decoded+=decode[q];
+					q=readBit(qsxdata);
+					if(q==0){
+						decoded+=3;
+					}else{
+						decoded+=2;
+					}
 				}else{
-					decoded+=q;
+					decoded+=1;
 				}
 			}
 			
 			ints.Add(decoded);
 			
-			zero=readBit(qsxdata);
+			
 		}
-			//ints.RemoveAt(ints.Count-1);
+			
 			return ints;
 		}
         public static List<int> Compress(byte[] uncompressed)
@@ -206,7 +231,8 @@ namespace LZW
  
             string w = string.Empty;
             List<int> compressed = new List<int>();
- 
+			
+			
             foreach (char c in uncompressed)
             {
                 string wc = w + c;
@@ -226,8 +252,10 @@ namespace LZW
  
             // write remaining output if necessary
             if (!string.IsNullOrEmpty(w))
-                compressed.Add(dictionary[w]);
- 
+            {
+            		compressed.Add(dictionary[w]>>8);
+            		compressed.Add(dictionary[w]&255);
+            }
             return compressed;
         }
  
@@ -242,8 +270,9 @@ namespace LZW
             compressed.RemoveAt(0);
             StringBuilder decompressed = new StringBuilder(w);
  
-            foreach (int k in compressed)
+            for (int c=0; c< compressed.Count;c++)
             {
+            	int k=(compressed[c++]<<8)+compressed[c];
                 string entry = null;
                 if (dictionary.ContainsKey(k))
                     entry = dictionary[k];
