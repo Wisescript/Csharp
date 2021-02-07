@@ -12,7 +12,7 @@ namespace LZW
             Console.WriteLine("Encoding...");
             Bits = new Dictionary<object,int>();
             Power= new Dictionary<object,int>();
-            byte[] file = File.ReadAllBytes("/storage/emulated/0/Edited/ok.jpg");
+            byte[] file = File.ReadAllBytes("/storage/emulated/0/Edited/S.html");
            
             List<int> compressed = Compress(file);
             
@@ -20,24 +20,29 @@ namespace LZW
             foreach(var b in file)
               fileIn.Add(b);
             List<Byte> data = Qsx(fileIn);
-            
-            List<int> lzw = Compress(data.ToArray());
-            while(lzw.Count>(fileIn.Count*0.4))
-            {
-             data = Qsx(lzw);
-             lzw = Compress(data.ToArray());
-            }
-            
-            
             List<int>  idata = Usx(data);
             
+            List<int> lzw = Compress(data.ToArray());
+           // while(lzw.Count>(3000))
+           // {
+           //  data = Qsx(lzw);
+           //  lzw = Compress(data.ToArray());
+           // }
+            
+            
+            
+            
+            List<char> buffer = new List<char>();
+            foreach(int x in idata)
+                buffer.Add(Convert.ToChar(x));
+                
 			Console.WriteLine("File {0} ::\n Zip {1} ::\n Qsx  {2} :: \n Qsx+loop {3}",
 			fileIn.Count,
 			compressed.Count,
 			data.Count,
 			lzw.Count
 			);
-			
+			Console.WriteLine(new String(buffer.ToArray()));
 		 }
 		public static void writeValue(List<Byte>output, int data, int bits)
 		{
