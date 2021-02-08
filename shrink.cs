@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
  
-namespace dotNet
+namespace LZW
 {
-    public class QSX
+    public class Program
     {
         public static void Main(string[] args)
         {
@@ -14,18 +14,35 @@ namespace dotNet
             Power= new Dictionary<object,int>();
             byte[] file = File.ReadAllBytes("/storage/emulated/0/Edited/S.html");
            
-            int n;
-            List<Byte> compressed = Compress(file);
-            List<Byte> data = EncodeLoop(new List<Byte>(file), out n);
-          //  List<Byte>  idata = Decode(data);
+            List<int> compressed = Compress(file);
+            
+           List<int> fileIn = new List<int>();
+            foreach(var b in file)
+              fileIn.Add(b);
+            List<Byte> data = Qsx(fileIn);
+            List<int>  idata = Usx(data);
+            
+            List<int> lzw = Compress(data.ToArray());
+           // while(lzw.Count>(3000))
+           // {
+           //  data = Qsx(lzw);
+           //  lzw = Compress(data.ToArray());
+           // }
             
             
-			Console.WriteLine("File {0} ::\n Zip {1} ::\n Qsx  {2} :: ",
-			file.Length,
+            
+            
+            List<char> buffer = new List<char>();
+            foreach(int x in idata)
+                buffer.Add(Convert.ToChar(x));
+                
+			Console.WriteLine("File {0} ::\n Zip {1} ::\n Qsx  {2} :: \n Qsx+loop {3}",
+			fileIn.Count,
 			compressed.Count,
-			data.Count
+			data.Count,
+			lzw.Count
 			);
-		 //	Console.WriteLine(Encoding.UTF8.GetString(idata.ToArray()));
+			Console.WriteLine(new String(buffer.ToArray()));
 		 }
 		public static void writeValue(List<Byte>output, int data, int bits)
 		{
@@ -96,21 +113,8 @@ namespace dotNet
 		
 		public static int[] code=new int[]           {1,1,1,0};
 		public static int[] codebits=new int[]       {1,2,3,3};
-	    public static List<Byte> EncodeLoop(List<Byte> data, out int nloop)
-	    {
-	    	nloop = 0;
-	    	List<Byte> lzw = Compress(data.ToArray());
-	    	var ok=lzw.Count*0.4;
-            while(lzw.Count>ok)
-            {
-              var qsxdata = Encode(lzw);
-              lzw = Compress(qsxdata.ToArray());
-              
-              nloop++;
-            }
-            return lzw;
-	    }
-		public static List<Byte> Encode(List<Byte> lzwdata)
+	    
+		public static List<Byte> Qsx(List<int> lzwdata)
 		{
 			var bytes = new List<Byte>();
 			Bits[lzwdata]=0;
@@ -138,9 +142,9 @@ namespace dotNet
 			
 			return bytes;
 		}
-		public static List<Byte> Decode(List<Byte> qsxdata)
+		public static List<int> Usx(List<Byte> qsxdata)
 		{
-			var ints=new List<Byte>();
+			var ints=new List<int>();
 			
 			Bits[qsxdata]=0;
 			Power[qsxdata]=0;
@@ -218,14 +222,14 @@ namespace dotNet
 				}
 			}
 			
-			ints.Add(Convert.ToByte(decoded));
+			ints.Add(decoded);
 			
 			
 		}
 			
 			return ints;
 		}
-        public static List<Byte> Compress(byte[] uncompressed)
+        public static List<int> Compress(byte[] uncompressed)
         {
             // build the dictionary
             Dictionary<string, int> dictionary = new Dictionary<string, int>();
@@ -233,7 +237,7 @@ namespace dotNet
                 dictionary.Add(((char)i).ToString(), i);
  
             string w = string.Empty;
-            List<Byte> compressed = new List<Byte>();
+            List<int> compressed = new List<int>();
 			
 			
             foreach (char c in uncompressed)
@@ -246,8 +250,7 @@ namespace dotNet
                 else
                 {
                     // write w to output
-                    //compressed.Add(Convert.ToByte((dictionary[w]>>8)&255));
-            		compressed.Add(Convert.ToByte(dictionary[w]&255));
+                    compressed.Add(dictionary[w]);
                     // wc is a new sequence; add it to the dictionary
                     dictionary.Add(wc, dictionary.Count);
                     w = c.ToString();
@@ -257,13 +260,13 @@ namespace dotNet
             // write remaining output if necessary
             if (!string.IsNullOrEmpty(w))
             {
-            	//	compressed.Add(Convert.ToByte((dictionary[w]>>8)&255));
-            		compressed.Add(Convert.ToByte(dictionary[w]&255));
+            		compressed.Add(dictionary[w]>>8);
+            		compressed.Add(dictionary[w]&255);
             }
             return compressed;
         }
  
-        public static string Decompress(List<Byte> compressed)
+        public static string Decompress(List<int> compressed)
         {
             // build the dictionary
             Dictionary<int, string> dictionary = new Dictionary<int, string>();
