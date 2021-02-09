@@ -62,8 +62,8 @@ namespace dotNet
 				b=merge_sort(bytes,items,m,e);
 				return merge(bytes,a,b);
 			}
-			a=new int[]{items[e]};
-			b=new int[]{items[o]};
+			a=new int[]{items[o]};
+			b=new int[]{items[m]};
 			return merge(bytes,a,b);
 		}
 		public static int[] merge_read(List<Byte>bytes, int []x, int [] y)
@@ -100,8 +100,8 @@ namespace dotNet
 				b=merge_sort_read(bytes,items,m,e);
 				return merge_read(bytes,a,b);
 			}
-			a=new int[]{items[e]};
-			b=new int[]{items[o]};
+			a=new int[]{items[o]};
+			b=new int[]{items[m]};
 			return merge_read(bytes,a,b);
 			
 			
@@ -193,25 +193,30 @@ namespace dotNet
 			Bits[lzwdata]=0;
 			Power[lzwdata]=0;
 		
+		    var o=0;
 			var a=0;
 			var max=0;
-			
+			var items=0;
 			var sorted = new int[256];
 			var initial = new int[128];
+			
+			writeValue(bytes,lzwdata.Count,32);
+			
 			while(a<lzwdata.Count)
 			{
-				for(int i=0;i<70 && (a+i)<lzwdata.Count;i++)
+				int i;
+				for( i=0;i<70 && (a+i)<lzwdata.Count;i++)
 				{
 					if (max<lzwdata[a])max=lzwdata[a];
 					initial[i]=lzwdata[a];
 					sorted[lzwdata[a++]]++;
 				}
-				
-				for(int i=0;i<max;i++){
+				items=i;
+				for(i=0;i<max;i++){
 				  while(sorted[i]!=0){writeBit(bytes,1);sorted[i]--; }
 				  writeBit(bytes,0);}
 				  
-				merge_sort(bytes,initial,0,69);
+				merge_sort(bytes,initial,o,items);
 			}
 			
 			while(Power[bytes]!=0)
@@ -225,15 +230,27 @@ namespace dotNet
 			
 			Bits[qsxdata]=0;
 			Power[qsxdata]=0;
-			
-			int i,q,decoded=0;
 		
-			
+			int i,q;
+		    int max=0;
+		    int count=readValue(qsxdata,32);
+			int []sorted =new int[256];
 			while(Bits[qsxdata]<(qsxdata.Count))
 			{
-				/*todo*/
-				readBit(qsxdata);
-				ints.Add(Convert.ToByte(decoded));
+				q=0;
+				for(i=0;i<256 && q<70 && max<count;i++)
+				{
+					while(readBit(qsxdata)==1 && q<70 && max<count)
+					{
+					  sorted[q++]=i;
+					  max++;
+					}
+				}
+				
+				int []r=merge_sort_read(qsxdata,sorted,0,q);
+				
+				for(i=0;i<q;i++)
+				ints.Add(Convert.ToByte(r[i]));
 			}
 			
 			return ints;
