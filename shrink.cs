@@ -3,47 +3,109 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
  
-namespace LZW
+namespace dotNet
 {
-    public class Program
+	
+    public class QSX
     {
         public static void Main(string[] args)
         {
             Console.WriteLine("Encoding...");
             Bits = new Dictionary<object,int>();
             Power= new Dictionary<object,int>();
-            byte[] file = File.ReadAllBytes("/storage/emulated/0/Edited/S.html");
-           
-            List<int> compressed = Compress(file);
+         //   byte[] file = File.ReadAllBytes("/storage/emulated/0/Edited/L.jpeg");
+            Byte[] file = Encoding.UTF8.GetBytes("qsx for csharp v 0.02");
+            int n;
+            List<Byte> compressed = Compress(file);
+            String text = Decompress(compressed);
             
-           List<int> fileIn = new List<int>();
-            foreach(var b in file)
-              fileIn.Add(b);
-            List<Byte> data = Qsx(fileIn);
-            List<int>  idata = Usx(data);
-            
-            List<int> lzw = Compress(data.ToArray());
-           // while(lzw.Count>(3000))
-           // {
-           //  data = Qsx(lzw);
-           //  lzw = Compress(data.ToArray());
-           // }
+            List<Byte> data = Encode(new List<Byte>(file));
+            List<Byte>  idata = Decode(data);
             
             
-            
-            
-            List<char> buffer = new List<char>();
-            foreach(int x in idata)
-                buffer.Add(Convert.ToChar(x));
-                
-			Console.WriteLine("File {0} ::\n Zip {1} ::\n Qsx  {2} :: \n Qsx+loop {3}",
-			fileIn.Count,
+			Console.WriteLine("File {0} ::\n Zip {1} ::\n Qsx  {2} :: ",
+			file.Length,
 			compressed.Count,
-			data.Count,
-			lzw.Count
+			data.Count
 			);
-			Console.WriteLine(new String(buffer.ToArray()));
+		 //	Console.WriteLine(Encoding.UTF8.GetString(idata.ToArray()));
+		   // Console.WriteLine(text);
 		 }
+		public static int[] merge(List<Byte>bytes,int []x ,int []y)
+		{
+			int[] r=new int[x.Length+y.Length];
+			int i=0,j=0,k=0;
+			while(i<x.Length && j<y.Length)
+			  if(x[i]<y[j])
+			  {
+			  	r[k++]=x[i++];
+			  	writeBit(bytes,1);
+			  }else{
+			  	r[k++]=y[j++];
+			  	writeBit(bytes,0);
+			  }
+			  while(i<x.Length)
+			    r[k++]=x[i++];
+			  while(j<y.Length)
+			    r[k++]=y[j++];
+			   return r;
+		}
+		public static int[] merge_sort(List<Byte> bytes, int[] items,int o, int e)
+		{
+			int []a;
+			int []b;
+			int m = (e-o)/2+e;
+			
+			if ((e-m)>1)
+			{
+				a=merge_sort(bytes,items,o,m);
+				b=merge_sort(bytes,items,m,e);
+				return merge(bytes,a,b);
+			}
+			a=new int[]{items[e]};
+			b=new int[]{items[o]};
+			return merge(bytes,a,b);
+		}
+		public static int[] merge_read(List<Byte>bytes, int []x, int [] y)
+		{
+			int[] r=new int[x.Length+y.Length];
+			int i=0,j=0,k=0;
+			while(i<x.Length && j<y.Length)
+			  if(readBit(bytes)==1)
+			  {
+			  	r[k++]=x[i++];
+			  }else{
+			  	r[k++]=y[j++];
+			  }
+			  while(i<x.Length)
+			    r[k++]=x[i++];
+			  while(j<y.Length)
+			    r[k++]=y[j++];
+			   return r;
+			
+			
+			return x;
+		}
+		public static int[] merge_sort_read(List<Byte>bytes, int [] items, int o, int e)
+		{
+			
+			
+			int []a;
+			int []b;
+			int m = (e-o)/2+e;
+			
+			if ((e-m)>1)
+			{
+				a=merge_sort_read(bytes,items,o,m);
+				b=merge_sort_read(bytes,items,m,e);
+				return merge_read(bytes,a,b);
+			}
+			a=new int[]{items[e]};
+			b=new int[]{items[o]};
+			return merge_read(bytes,a,b);
+			
+			
+		}
 		public static void writeValue(List<Byte>output, int data, int bits)
 		{
 			while(bits>0)
@@ -111,40 +173,55 @@ namespace LZW
 			return (value==0)?0:1;
 		}
 		
-		public static int[] code=new int[]           {1,1,1,0};
-		public static int[] codebits=new int[]       {1,2,3,3};
-	    
-		public static List<Byte> Qsx(List<int> lzwdata)
+         public static List<Byte> EncodeLoop(List<Byte> data, out int nloop)
+	    {
+	    	nloop = 0;
+	    	List<Byte> lzw = Compress(data.ToArray());
+	    	var ok=300;
+            while(lzw.Count>ok)
+            {
+              var qsxdata = Encode(lzw);
+              lzw = Compress(qsxdata.ToArray());
+              
+              nloop++;
+            }
+            return lzw;
+	    }
+		public static List<Byte> Encode(List<Byte> lzwdata)
 		{
 			var bytes = new List<Byte>();
 			Bits[lzwdata]=0;
 			Power[lzwdata]=0;
 		
 			var a=0;
+			var max=0;
+			
+			var sorted = new int[256];
+			var initial = new int[128];
 			while(a<lzwdata.Count)
 			{
-				try{
-				int l=(int)(lzwdata[a]&3);
-				int m=(int)(lzwdata[a]>>2)&3;
-				int n=(int)(lzwdata[a]>>4)&3;
-				int o=(int)(lzwdata[a]>>6)&3;
+				for(int i=0;i<70 && (a+i)<lzwdata.Count;i++)
+				{
+					if (max<lzwdata[a])max=lzwdata[a];
+					initial[i]=lzwdata[a];
+					sorted[lzwdata[a++]]++;
+				}
 				
-				writeValue(bytes,code[o],codebits[o]);
-				writeValue(bytes,code[n],codebits[n]);
-				writeValue(bytes,code[m],codebits[m]);
-				writeValue(bytes,code[l],codebits[l]);
-				a++;
-				}catch(Exception ex){ex.ToString();}
+				for(int i=0;i<max;i++){
+				  while(sorted[i]!=0){writeBit(bytes,1);sorted[i]--; }
+				  writeBit(bytes,0);}
+				  
+				merge_sort(bytes,initial,0,69);
 			}
 			
 			while(Power[bytes]!=0)
-			   writeBit(bytes,1);
+			   writeBit(bytes,0);
 			
 			return bytes;
 		}
-		public static List<int> Usx(List<Byte> qsxdata)
+		public static List<Byte> Decode(List<Byte> qsxdata)
 		{
-			var ints=new List<int>();
+			var ints=new List<Byte>();
 			
 			Bits[qsxdata]=0;
 			Power[qsxdata]=0;
@@ -152,84 +229,16 @@ namespace LZW
 			int i,q,decoded=0;
 		
 			
-		while(Bits[qsxdata]<(qsxdata.Count))
-		{
-			
-			decoded=0;
-			int zero=readBit(qsxdata);
-			if(zero==0){
-				q = readBit(qsxdata);
-				if (q==0){
-					q=readBit(qsxdata);
-					if(q==0){
-						decoded+=3;
-					}else{
-						decoded+=2;
-					}
-				}else{
-					decoded+=1;
-				}
+			while(Bits[qsxdata]<(qsxdata.Count))
+			{
+				/*todo*/
+				readBit(qsxdata);
+				ints.Add(Convert.ToByte(decoded));
 			}
-			
-			decoded=decoded<<2;
-			
-			zero=readBit(qsxdata);
-			if(zero==0){
-				q = readBit(qsxdata);
-				if (q==0){
-					q=readBit(qsxdata);
-					if(q==0){
-						decoded+=3;
-					}else{
-						decoded+=2;
-					}
-				}else{
-					decoded+=1;
-				}
-			}
-			
-			decoded=decoded<<2;
-			
-			zero=readBit(qsxdata);
-			if(zero==0){
-				q = readBit(qsxdata);
-				if (q==0){
-					q=readBit(qsxdata);
-					if(q==0){
-						decoded+=3;
-					}else{
-						decoded+=2;
-					}
-				}else{
-					decoded+=1;
-				}
-			}
-			
-			decoded=decoded<<2;
-			
-			zero=readBit(qsxdata);
-			if(zero==0){
-				q = readBit(qsxdata);
-				if (q==0){
-					q=readBit(qsxdata);
-					if(q==0){
-						decoded+=3;
-					}else{
-						decoded+=2;
-					}
-				}else{
-					decoded+=1;
-				}
-			}
-			
-			ints.Add(decoded);
-			
-			
-		}
 			
 			return ints;
 		}
-        public static List<int> Compress(byte[] uncompressed)
+        public static List<Byte> Compress(byte[] uncompressed)
         {
             // build the dictionary
             Dictionary<string, int> dictionary = new Dictionary<string, int>();
@@ -237,7 +246,7 @@ namespace LZW
                 dictionary.Add(((char)i).ToString(), i);
  
             string w = string.Empty;
-            List<int> compressed = new List<int>();
+            List<Byte> compressed = new List<Byte>();
 			
 			
             foreach (char c in uncompressed)
@@ -250,7 +259,8 @@ namespace LZW
                 else
                 {
                     // write w to output
-                    compressed.Add(dictionary[w]);
+                    compressed.Add(Convert.ToByte((dictionary[w]>>8)&255));
+            		compressed.Add(Convert.ToByte(dictionary[w]&255));
                     // wc is a new sequence; add it to the dictionary
                     dictionary.Add(wc, dictionary.Count);
                     w = c.ToString();
@@ -260,20 +270,21 @@ namespace LZW
             // write remaining output if necessary
             if (!string.IsNullOrEmpty(w))
             {
-            		compressed.Add(dictionary[w]>>8);
-            		compressed.Add(dictionary[w]&255);
+            		compressed.Add(Convert.ToByte((dictionary[w]>>8)&255));
+            		compressed.Add(Convert.ToByte(dictionary[w]&255));
             }
             return compressed;
         }
  
-        public static string Decompress(List<int> compressed)
+        public static string Decompress(List<Byte> compressed)
         {
             // build the dictionary
             Dictionary<int, string> dictionary = new Dictionary<int, string>();
             for (int i = 0; i < 256; i++)
                 dictionary.Add(i, ((char)i).ToString());
  
-            string w = dictionary[compressed[0]];
+           string w = dictionary[(compressed[0]<<8)+compressed[1]];
+            compressed.RemoveAt(0);
             compressed.RemoveAt(0);
             StringBuilder decompressed = new StringBuilder(w);
  
